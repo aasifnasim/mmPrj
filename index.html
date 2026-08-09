@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Franklin Labs Presentation</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            background-color: #0f1115;
+            color: #333;
+            overflow: hidden;
+        }
+
+        .app-container {
+            width: 100vw;
+            height: 100vh;
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .screen {
+            display: none;
+            flex-direction: column;
+            height: 100%;
+            width: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: #ffffff;
+            padding: 20px;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* Header Styles */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+            flex-shrink: 0;
+        }
+
+        h1 {
+            font-size: 1.3rem;
+            color: #1a1a1a;
+        }
+
+        @media (min-width: 768px) {
+            h1 {
+                font-size: 1.6rem;
+            }
+            .screen {
+                padding: 30px;
+            }
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            background: #007aff;
+            color: white;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .btn:hover {
+            background: #005bb5;
+        }
+
+        .btn-exit {
+            background: #ff3b30;
+        }
+
+        .btn-exit:hover {
+            background: #d32f2f;
+        }
+
+        .btn:active {
+            opacity: 0.8;
+        }
+
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            overflow-y: auto;
+            flex-grow: 1;
+            padding-bottom: 10px;
+        }
+
+        @media (min-width: 768px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 24px;
+            }
+        }
+
+        .dashboard-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e1e4e8;
+            overflow: hidden;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .dashboard-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+        }
+
+        .dashboard-card:active {
+            transform: scale(0.98);
+        }
+
+        .card-thumb {
+            width: 100%;
+            height: 120px;
+            background: #ddd;
+            /* Resizes and fits image nicely into grid slots without distortion */
+            object-fit: contain; 
+            background-color: #fff;
+        }
+
+        @media (min-width: 768px) {
+            .card-thumb {
+                height: 180px;
+            }
+        }
+
+        .card-title {
+            padding: 12px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #333;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Detail Screen Fullscreen Image View with Touch zones */
+        .image-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000000;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 15px;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .image-container img {
+            /* Automatically scales to fit any screen (laptop, tablet, phone) dynamically */
+            width: 100%;
+            height: 100%;
+            object-fit: contain; 
+            pointer-events: none;
+        }
+
+        /* Visual indicator hints for left/right touch zones */
+        .image-container::before {
+            content: "‹";
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255,255,255,0.3);
+            font-size: 3rem;
+            pointer-events: none;
+        }
+
+        .image-container::after {
+            content: "›";
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255,255,255,0.3);
+            font-size: 3rem;
+            pointer-events: none;
+        }
+
+        /* Exit Screen */
+        #exit-screen {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            background: #111111;
+            color: white;
+        }
+
+        #exit-screen h2 {
+            margin-bottom: 10px;
+            font-size: 2.2rem;
+        }
+
+        #exit-screen p {
+            color: #aaa;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- HOME / DASHBOARD SCREEN -->
+        <div id="home-screen" class="screen active">
+            <header>
+                <h1>Franklin Labs Presentation</h1>
+                <button class="btn btn-exit" onclick="exitApp()">Exit App</button>
+            </header>
+            
+            <div class="dashboard-grid" id="dashboard-grid">
+                <!-- Dynamically populated via JavaScript -->
+            </div>
+        </div>
+
+        <!-- DETAIL / IMAGE SCREEN -->
+        <div id="detail-screen" class="screen">
+            <header>
+                <h1 id="slide-title">Product Title</h1>
+                <div class="btn-group">
+                    <button class="btn" onclick="goBack()">‹ Back</button>
+                    <button class="btn" onclick="goHome()">List</button>
+                    <button class="btn btn-exit" onclick="exitApp()">Exit</button>
+                </div>
+            </header>
+            <!-- Clicking left side goes to prev image, right side goes to next image -->
+            <div class="image-container" id="image-nav-zone" onclick="handleImageTouch(event)">
+                <img id="slide-image" src="" alt="Product Slide">
+            </div>
+        </div>
+
+        <!-- EXIT SCREEN -->
+        <div id="exit-screen" class="screen">
+            <h2>Presentation Closed</h2>
+            <p>You can now safely close this window or tab.</p>
+        </div>
+
+    </div>
+
+    <script>
+        // Data list of your product images
+        const slides = [
+            { title: "Healing & Recovery", url: "HealingNrecovery.jpg" },
+            { title: "FLL-RAB DSR", url: "fll-Rab.jpg" },
+            { title: "FLL-NVP", url: "fllNVP.jpg" },
+            { title: "FLL-COLD", url: "FLLcolde.jpg" },
+            { title: "FLL-FERO", url: "FLLeror.jpg" },
+            { title: "NIMZE-P", url: "Nimze-P.jpg" },
+            { title: "FLL-JIGAR", url: "Fil-Jigar.jpg" },
+            { title: "EASY-VEN Infusion Set", url: "Easy-Ven.jpg" }
+        ];
+
+        let currentIndex = 0;
+        let historyStack = [];
+
+        // Build dashboard cards on load
+        window.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('dashboard-grid');
+            slides.forEach((slide, index) => {
+                const card = document.createElement('div');
+                card.className = 'dashboard-card';
+                card.onclick = () => openSlide(index);
+                card.innerHTML = `
+                    <img class="card-thumb" src="${slide.url}" alt="${slide.title}">
+                    <div class="card-title">${index + 1}. ${slide.title}</div>
+                `;
+                grid.appendChild(card);
+            });
+        });
+
+        function openSlide(index) {
+            historyStack.push(currentIndex); // save previous state for back button
+            currentIndex = index;
+            updateSlideView();
+            
+            document.getElementById('home-screen').classList.remove('active');
+            document.getElementById('detail-screen').classList.add('active');
+        }
+
+        function updateSlideView() {
+            document.getElementById('slide-title').innerText = `${currentIndex + 1}. ${slides[currentIndex].title}`;
+            document.getElementById('slide-image').src = slides[currentIndex].url;
+        }
+
+        function handleImageTouch(event) {
+            const container = document.getElementById('image-nav-zone');
+            const rect = container.getBoundingClientRect();
+            const clickX = event.clientX - rect.left;
+            
+            // If touch/click is on the left half -> previous image
+            // If touch/click is on the right half -> next image
+            if (clickX < rect.width / 2) {
+                currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+            } else {
+                currentIndex = (currentIndex + 1) % slides.length;
+            }
+            updateSlideView();
+        }
+
+        function goBack() {
+            if (historyStack.length > 0) {
+                currentIndex = historyStack.pop();
+                updateSlideView();
+            } else {
+                goHome();
+            }
+        }
+
+        function goHome() {
+            document.getElementById('detail-screen').classList.remove('active');
+            document.getElementById('home-screen').classList.add('active');
+            historyStack = [];
+        }
+
+        function exitApp() {
+            document.getElementById('home-screen').classList.remove('active');
+            document.getElementById('detail-screen').classList.remove('active');
+            document.getElementById('exit-screen').classList.add('active');
+            
+            setTimeout(() => {
+                window.close();
+            }, 500);
+        }
+    </script>
+</body>
+</html>
