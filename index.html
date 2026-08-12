@@ -4,11 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Franklin Labs Presentation</title>
-<!-- Web App Manifest for Android/Chrome -->
-<link rel="manifest" href="manifest.json">
-
-<!-- Home Screen Icon for iOS/Safari -->
-<link rel="apple-touch-icon" href="mmPrjIcon.png">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
     <style>
         * {
             box-sizing: border-box;
@@ -20,7 +17,7 @@
         body, html {
             width: 100%;
             height: 100%;
-            background-color: #0f1115;
+            background-color: #000000;
             color: #333;
             overflow: hidden;
         }
@@ -105,10 +102,6 @@
             background: #d32f2f;
         }
 
-        .btn:active {
-            opacity: 0.8;
-        }
-
         /* Dashboard Grid Layout */
         .dashboard-grid {
             display: grid;
@@ -149,17 +142,11 @@
             box-shadow: 0 6px 16px rgba(0,0,0,0.08);
         }
 
-        .dashboard-card:active {
-            transform: scale(0.98);
-        }
-
         .card-thumb {
             width: 100%;
             height: 120px;
-            background: #ddd;
-            /* Resizes and fits image nicely into grid slots without distortion */
-            object-fit: contain; 
-            background-color: #fff;
+            background: #fff;
+            object-fit: contain;
         }
 
         @media (min-width: 768px) {
@@ -179,49 +166,86 @@
             text-overflow: ellipsis;
         }
 
-        /* Detail Screen Fullscreen Image View with Touch zones */
-        .image-container {
-            flex-grow: 1;
+        /* Immersive Fullscreen View with Auto-Hide Controls */
+        #detail-screen {
+            background: #000000;
+            padding: 0;
+        }
+
+        .fullscreen-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
             display: flex;
             justify-content: center;
             align-items: center;
             background: #000000;
-            border-radius: 12px;
             overflow: hidden;
-            margin-bottom: 15px;
-            position: relative;
             cursor: pointer;
         }
 
-        .image-container img {
-            /* Automatically scales to fit any screen (laptop, tablet, phone) dynamically */
+        .fullscreen-container img {
             width: 100%;
             height: 100%;
-            object-fit: contain; 
+            object-fit: contain;
             pointer-events: none;
         }
 
-        /* Visual indicator hints for left/right touch zones */
-        .image-container::before {
+        /* Floating Header Overlay that auto-hides */
+        .overlay-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.8), rgba(0,0,0,0));
+            z-index: 10;
+            transition: opacity 0.4s ease;
+        }
+
+        .overlay-header h1 {
+            color: #ffffff;
+            font-size: 1.2rem;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* Hidden state class */
+        .hidden-controls .overlay-header {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Side navigation click areas hint */
+        .fullscreen-container::before {
             content: "‹";
             position: absolute;
-            left: 10px;
+            left: 15px;
             top: 50%;
             transform: translateY(-50%);
-            color: rgba(255,255,255,0.3);
-            font-size: 3rem;
+            color: rgba(255,255,255,0.2);
+            font-size: 4rem;
             pointer-events: none;
+            transition: opacity 0.3s;
         }
 
-        .image-container::after {
+        .fullscreen-container::after {
             content: "›";
             position: absolute;
-            right: 10px;
+            right: 15px;
             top: 50%;
             transform: translateY(-50%);
-            color: rgba(255,255,255,0.3);
-            font-size: 3rem;
+            color: rgba(255,255,255,0.2);
+            font-size: 4rem;
             pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .hidden-controls.fullscreen-container::before,
+        .hidden-controls.fullscreen-container::after {
+            opacity: 0;
         }
 
         /* Exit Screen */
@@ -260,18 +284,17 @@
             </div>
         </div>
 
-        <!-- DETAIL / IMAGE SCREEN -->
+        <!-- DETAIL / FULLSCREEN IMAGE SCREEN -->
         <div id="detail-screen" class="screen">
-            <header>
-                <h1 id="slide-title">Product Title</h1>
-                <div class="btn-group">
-                    <button class="btn" onclick="goBack()">‹ Back</button>
-                    <button class="btn" onclick="goHome()">List</button>
-                    <button class="btn btn-exit" onclick="exitApp()">Exit</button>
+            <div class="fullscreen-container" id="fullscreen-zone" onclick="handleScreenClick(event)">
+                <div class="overlay-header" id="overlay-header" onclick="event.stopPropagation()">
+                    <h1 id="slide-title">Product Title</h1>
+                    <div class="btn-group">
+                        <button class="btn" onclick="goBack()">‹ Back</button>
+                        <button class="btn" onclick="goHome()">List</button>
+                        <button class="btn btn-exit" onclick="exitApp()">Exit</button>
+                    </div>
                 </div>
-            </header>
-            <!-- Clicking left side goes to prev image, right side goes to next image -->
-            <div class="image-container" id="image-nav-zone" onclick="handleImageTouch(event)">
                 <img id="slide-image" src="" alt="Product Slide">
             </div>
         </div>
@@ -285,7 +308,6 @@
     </div>
 
     <script>
-        // Data list of your product images
         const slides = [
             { title: "Healing & Recovery", url: "HealingNrecovery.jpg" },
             { title: "FLL-RAB DSR", url: "fll-Rab.jpg" },
@@ -299,8 +321,8 @@
 
         let currentIndex = 0;
         let historyStack = [];
+        let hideTimer = null;
 
-        // Build dashboard cards on load
         window.addEventListener('DOMContentLoaded', () => {
             const grid = document.getElementById('dashboard-grid');
             slides.forEach((slide, index) => {
@@ -316,12 +338,13 @@
         });
 
         function openSlide(index) {
-            historyStack.push(currentIndex); // save previous state for back button
+            historyStack.push(currentIndex);
             currentIndex = index;
             updateSlideView();
             
             document.getElementById('home-screen').classList.remove('active');
             document.getElementById('detail-screen').classList.add('active');
+            resetHideTimer();
         }
 
         function updateSlideView() {
@@ -329,37 +352,67 @@
             document.getElementById('slide-image').src = slides[currentIndex].url;
         }
 
-        function handleImageTouch(event) {
-            const container = document.getElementById('image-nav-zone');
+        function handleScreenClick(event) {
+            const container = document.getElementById('fullscreen-zone');
+            
+            // If controls are currently hidden, clicking anywhere reveals them and restarts the timer
+            if (container.classList.contains('hidden-controls')) {
+                container.classList.remove('hidden-controls');
+                resetHideTimer();
+                return;
+            }
+
+            // Otherwise, check if click was on left or right half to change slides
             const rect = container.getBoundingClientRect();
             const clickX = event.clientX - rect.left;
             
-            // If touch/click is on the left half -> previous image
-            // If touch/click is on the right half -> next image
-            if (clickX < rect.width / 2) {
+            if (clickX < rect.width / 3) {
+                // Left side: Previous slide
                 currentIndex = (currentIndex - 1 + slides.length) % slides.length;
-            } else {
+                updateSlideView();
+                resetHideTimer();
+            } else if (clickX > (rect.width * 2) / 3) {
+                // Right side: Next slide
                 currentIndex = (currentIndex + 1) % slides.length;
+                updateSlideView();
+                resetHideTimer();
+            } else {
+                // Center click: Toggle hide/show controls immediately
+                container.classList.toggle('hidden-controls');
             }
-            updateSlideView();
+        }
+
+        function resetHideTimer() {
+            const container = document.getElementById('fullscreen-zone');
+            container.classList.remove('hidden-controls');
+            
+            if (hideTimer) clearTimeout(hideTimer);
+            
+            // Auto hide buttons after 3 seconds of no interaction
+            hideTimer = setTimeout(() => {
+                container.classList.add('hidden-controls');
+            }, 3000);
         }
 
         function goBack() {
             if (historyStack.length > 0) {
                 currentIndex = historyStack.pop();
                 updateSlideView();
+                resetHideTimer();
             } else {
                 goHome();
             }
         }
 
         function goHome() {
+            if (hideTimer) clearTimeout(hideTimer);
             document.getElementById('detail-screen').classList.remove('active');
             document.getElementById('home-screen').classList.add('active');
             historyStack = [];
         }
 
         function exitApp() {
+            if (hideTimer) clearTimeout(hideTimer);
             document.getElementById('home-screen').classList.remove('active');
             document.getElementById('detail-screen').classList.remove('active');
             document.getElementById('exit-screen').classList.add('active');
